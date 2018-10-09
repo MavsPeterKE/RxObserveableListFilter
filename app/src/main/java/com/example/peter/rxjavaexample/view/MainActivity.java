@@ -5,6 +5,7 @@ import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.example.peter.rxjavaexample.R;
 import com.example.peter.rxjavaexample.model.Student;
@@ -13,15 +14,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.Observer;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Function;
 import io.reactivex.functions.Predicate;
 import io.reactivex.schedulers.Schedulers;
 
 public class MainActivity extends AppCompatActivity {
     private Disposable disposable;
-    private Observable<Student> mStudentObservable;
+    private Observable<List<Student>> mStudentObservable;
     private Observer<Student> mStudentObserver;
 
     @SuppressLint("CheckResult")
@@ -31,16 +34,19 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         //create student ObserveableData
-        mStudentObservable = Observable.fromArray(getStudentsList());
+        mStudentObservable = Observable.just(getStudentsList());
 
         //Create an Observer to watch on student
         mStudentObserver = getStudentObserver();
 
         //subscribe to the Obseveable
-        mStudentObservable.subscribeOn(Schedulers.io())
+        mStudentObservable
+                .flatMap(Observable::fromIterable)
+                .filter(student -> (student.isAlumni() == true))
                 .observeOn(AndroidSchedulers.mainThread())
-                .filter(student -> student.isAlumni()==true)
+                .subscribeOn(Schedulers.io())
                 .subscribeWith(mStudentObserver);
+
 
     }
 
@@ -49,13 +55,12 @@ public class MainActivity extends AppCompatActivity {
         return new Observer<Student>() {
             @Override
             public void onSubscribe(Disposable d) {
-                disposable = d;
+              disposable = d;
             }
 
             @Override
             public void onNext(Student student) {
-                //Logs all alumni students filtered from the Observeable
-                Log.e("Alumni__", student.getUsername());
+                Log.e("Alumni__", ""+student.getUsername());
             }
 
             @Override
@@ -65,13 +70,13 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onComplete() {
-                Log.e("Alumni__", "Completed");
+                Log.e("Alumni__", "emission Complete");
             }
         };
     }
 
-    private Student[] getStudentsList() {
-        Student[] studentsList = new Student[4];
+    private List<Student> getStudentsList() {
+        List<Student> studentsList = new ArrayList<>();
         Student peter = new Student();
         peter.setUsername("Mavs");
         peter.setAge("20");
@@ -92,10 +97,10 @@ public class MainActivity extends AppCompatActivity {
         johnte.setAge("20");
         johnte.setAlumni(false);
 
-        studentsList[0] = peter;
-        studentsList[1] = mike;
-        studentsList[2] = (linda);
-        studentsList[3] = (johnte);
+        studentsList.add(peter);
+        studentsList.add(mike);
+        studentsList.add(linda);
+        studentsList.add(johnte);
         return studentsList;
     }
 
